@@ -37,6 +37,10 @@ class Cart {
   get totalPrice() {
     return [...this.products.values()].reduce((acc, it) => acc + it.totalPrice, 0);
   }
+
+  reset() {
+    this.products.clear();
+  }
 }
 
 class Product {
@@ -92,6 +96,11 @@ class Locators {
 
 
 class App {
+  static readonly URLs = {
+    root: 'https://enotes.pointschool.ru',
+    basket: 'https://enotes.pointschool.ru/basket',
+    basketClear: 'https://enotes.pointschool.ru/basket/clear'
+  };
   readonly page: Page;
   cart: Cart;
   products: Map<string, Product>;
@@ -133,13 +142,13 @@ class App {
     await expect(this.userDropdown()).toBeVisible();
   }
 
-  async checkCartSpanCountHas(count: number) {
+  async checkCartItemsCountSpanHas(count: number) {
     await expect(this.cartItemsCountSpan()).toContainText(count.toString());
   }
 
   async checkCartIsEmpty(): Promise<void> {
     //await expect(this.cartItemsCountSpan()).toContainText('0');
-    await this.checkCartSpanCountHas(0);
+    await this.checkCartItemsCountSpanHas(0);
   }
 
   async clickCart(): Promise<void> {
@@ -148,13 +157,10 @@ class App {
 
   async makeProduct(item: Locator): Promise<Product> {
     const name = await item.locator("div.product_name").innerText();
-
-    // const priceLocator = item.getByText(/Цена/i);
     const spanPrice = item.locator("span.product_price");
     const priceText = await spanPrice.innerText();
     const price = parsePrice(priceText);
     const hasDiscount = await productHasDiscount(item);
-
     const countText = await item.locator(".product_count").innerText();
     const productCount = parseProductCount(countText);
 
@@ -171,7 +177,6 @@ class App {
     const products = await this.productList().all();
     for (const item of products) {
       const product = await this.makeProduct(item);
-      // console.log('PRODUCT', product)
       this.products.set(product.id, product);
     }
   }
@@ -184,14 +189,53 @@ class App {
     await normalPriceProduct.clickBuy();
   }
 
-  async resetCart(): Promise<void> {
-    const countSpan = this.cartItemsCountSpan();
-    if (await countSpan.isVisible()) {
-      const countValue = await countSpan.innerText();
-      if (countValue.startsWith('0')) return;
+  async buyFirstDiscountPriceProduct(): Promise<void> {
+    const discountPriceProduct = [...this.products.values()].find(it => it.hasDiscount);
+    if (!discountPriceProduct) {
+      throw new Error("Not found product with discount price");
     }
-    await this.clickCartDropdown();
-    await this.clickResetCartButton();
+    await discountPriceProduct.clickBuy();
+  }
+
+  async buyProducts(count: number): Promise<void> {
+    const products = [...this.products.values()];
+    for (let i=0; i < count; i++) {
+      const next = i % products.length;
+      await products[next].clickBuy();
+    }
+  }
+
+  async buySameProduct(count: number): Promise<void> {
+    const product = [...this.products.values()].find(it => it.totalCount >= count);
+    if (!product) {
+      throw new Error(`Failed to find product with enough count: ${count}`);
+    }
+    for (let i=0; i<count; i++) {
+      await product.clickBuy();
+    }
+  }
+
+  async resetCart(): Promise<void> {
+    this.cart.reset();
+    const cookies = await this.page.context().cookies([App.URLs.root]);
+    const Cookie = cookies.map(({ name, value }) => ([name, value].join('='))).join('; ');
+    const headers = {
+      Cookie,
+    };
+
+    for (const metaTag of await this.page.locator('head > meta').all()) {
+      const nameAttr = await metaTag.getAttribute('name');
+      if (nameAttr && nameAttr === 'csrf-token') {
+        const x_csrf_token = await metaTag.getAttribute('content');
+        if (!x_csrf_token) {
+          throw new Error('No csrf_token in meta tag');
+        }
+        headers['X-CSRF-Token'] = x_csrf_token;
+      }
+    }
+    const response = await this.page.context().request.post(App.URLs.basketClear, { headers });
+    expect(response.ok()).toBe(true);
+    await this.page.reload();
   }
 
   async clickCartDropdown(): Promise<void> {
@@ -224,11 +268,7 @@ class App {
 
   async checkCartPanel() {
     await expect(this.cartPanel()).toBeVisible();
-
     const cartItems = await this.cartPanelItemList().all();
-
-    console.log('CHECKCARTPANEL', this.cart.products);
-    console.log('CARTITEMS', cartItems);
 
     expect(this.cart.products.size).toEqual(cartItems.length);
 
@@ -245,7 +285,6 @@ class App {
   }
 }
 
-// 'displaying the quantity of goods next to the cart icon'
 test.describe('Test Cart', () => {
   let app: App;
 
@@ -271,13 +310,67 @@ test.describe('Test Cart', () => {
   //   await app.checkCartPage();
   // });
 
-  test('Go to cart with 1 normal price product', async ({ page }) => {
+  // test('Go to cart with 1 normal price product', async ({ page }) => {
+  //   await app.checkLoggedIn();
+  //   await app.checkCartIsEmpty();
+
+  //   await app.buyFirstNormalPriceProduct();
+
+  //   await app.checkCartSpanCountHas(1);
+
+  //   await app.clickCartDropdown();
+  //   await app.checkCartPanel();
+  //   await app.clickGoToCart();
+
+  //   await app.waitForCartPage();
+  //   await app.checkNoSiteError();
+  //   await app.checkCartPage();
+  // });
+
+  // test('Go to cart with 1 discount price product', async ({ page }) => {
+  //   await app.checkLoggedIn();
+  //   await app.checkCartIsEmpty();
+
+  //   await app.buyFirstDiscountPriceProduct();
+
+  //   await app.checkCartSpanCountHas(1);
+
+  //   await app.clickCartDropdown();
+  //   await app.checkCartPanel();
+  //   await app.clickGoToCart();
+
+  //   await app.waitForCartPage();
+  //   await app.checkNoSiteError();
+  //   await app.checkCartPage();
+  // });
+
+
+  // test('Go to cart with 9 different products', async ({ page }) => {
+  //   await app.checkLoggedIn();
+  //   await app.checkCartIsEmpty();
+
+  //   await app.buyFirstDiscountPriceProduct();
+  //   await app.checkCartSpanCountHas(1);
+
+  //   await app.buyProducts(8);
+  //   await app.checkCartSpanCountHas(9);
+
+  //   await app.clickCartDropdown();
+  //   await app.checkCartPanel();
+  //   await app.clickGoToCart();
+
+  //   await app.waitForCartPage();
+  //   await app.checkNoSiteError();
+  //   await app.checkCartPage();
+  // });
+
+
+  test('Go to cart with 9 of the same products', async ({ page }) => {
     await app.checkLoggedIn();
     await app.checkCartIsEmpty();
 
-    await app.buyFirstNormalPriceProduct();
-
-    await app.checkCartSpanCountHas(1);
+    await app.buySameProduct(9);
+    await app.checkCartItemsCountSpanHas(9);
 
     await app.clickCartDropdown();
     await app.checkCartPanel();
@@ -287,6 +380,22 @@ test.describe('Test Cart', () => {
     await app.checkNoSiteError();
     await app.checkCartPage();
   });
+
+  // test('Go to cart with 10 of the same products', async ({ page }) => {
+  //   await app.checkLoggedIn();
+  //   await app.checkCartIsEmpty();
+
+  //   await app.buySameProduct(10);
+  //   await app.checkCartSpanCountHas(10);
+
+  //   await app.clickCartDropdown();
+  //   await app.checkCartPanel();
+  //   await app.clickGoToCart();
+
+  //   await app.waitForCartPage();
+  //   await app.checkNoSiteError();
+  //   await app.checkCartPage();
+  // });
 });
 
 
