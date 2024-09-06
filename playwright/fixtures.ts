@@ -1,4 +1,4 @@
-import { test as baseTest, expect } from '@playwright/test';
+import { Page, test as baseTest, expect } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 
@@ -36,7 +36,7 @@ export const test = baseTest.extend<{}, { workerStorageState: string }>({
     // Sometimes login flow sets cookies in the process of several redirects.
     // Wait for the final URL to ensure that the cookies are actually set.
     await page.waitForURL('https://enotes.pointschool.ru/');
-    
+
     // End of authentication steps.
 
     await page.context().storageState({ path: fileName });
@@ -54,7 +54,7 @@ async function acquireAccount(id: number) {
   };
 }
 
-async function fillLoginFormInput(page, locatorString: string, value: string) {
+async function fillLoginFormInput(page: Page, locatorString: string, value: string) {
   const locator = page.locator(locatorString);
   await locator.click();
   for (const it of value) {

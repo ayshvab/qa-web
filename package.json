@@ -3,12 +3,17 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "typecheck": "pnpm exec tsc -p tsconfig.json --noEmit",
+    "allureReport": "allure serve"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.46.1",
-    "@types/node": "^22.5.2"
+    "@tsconfig/node20": "^20.1.4",
+    "@types/node": "^22.5.2",
+    "allure-playwright": "3.0.0-beta.11"
   }
 }
