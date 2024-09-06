@@ -1,45 +1,45 @@
 import { expect, Page, Locator } from "@playwright/test";
 import { API } from "../API";
 
-class RootLocators {
-  page: Page;
+// class RootLocators {
+//   page: Page;
 
-  constructor(page: Page) {
-    this.page = page;
-  }
+//   constructor(page: Page) {
+//     this.page = page;
+//   }
 
-  userDropdown() {
-    return this.page.locator('#dropdownUser');
-  }
+//   userDropdown() {
+//     return this.page.locator('#dropdownUser');
+//   }
 
-  logoutButton() {
-    return this.page.locator('#navbarNav > ul > li.nav-item.dropdown.show > div > form > button');
-  }
+//   logoutButton() {
+//     return this.page.locator('#navbarNav > ul > li.nav-item.dropdown.show > div > form > button');
+//   }
 
-  cartItemCountDisplay() {
-    return this.page.locator('#basketContainer > span.basket-count-items');
-  }
+//   cartItemCountDisplay() {
+//     return this.page.locator('#basketContainer > span.basket-count-items');
+//   }
 
-  cartDropdown() {
-    return this.page.locator('#dropdownBasket');
-  }
+//   cartDropdown() {
+//     return this.page.locator('#dropdownBasket');
+//   }
 
-  productsContainer() {
-    return this.page.locator('body > div > div.container > div > div.note-list.row > div');
-  }
+//   productsContainer() {
+//     return this.page.locator('body > div > div.container > div > div.note-list.row > div');
+//   }
 
-  productList() {
-    return this.productsContainer().locator('div.note-item');
-  }
+//   productList() {
+//     return this.productsContainer().locator('div.note-item');
+//   }
 
-  normalPriceProductList() {
-    return this.productsContainer().locator('div.note-item:not(.hasDiscount)');
-  }
+//   normalPriceProductList() {
+//     return this.productsContainer().locator('div.note-item:not(.hasDiscount)');
+//   }
 
-  discountPriceProductList() {
-    return this.productsContainer().locator('div.note-item.hasDiscount');
-  }
-}
+//   discountPriceProductList() {
+//     return this.productsContainer().locator('div.note-item.hasDiscount');
+//   }
+// }
 
 class CartPanelLocators {
   page: Page;
@@ -197,7 +197,7 @@ class Product {
 class RootPage {
   readonly page: Page;
   readonly cart: Cart;
-  readonly locators: RootLocators;
+  // readonly locators: RootLocators;
   readonly cartPanelLocators: CartPanelLocators;
   readonly api: API;
   readonly products: Map<string, Product>;
@@ -207,9 +207,24 @@ class RootPage {
     this.api = api;
     this.cart = new Cart();
     this.products = new Map();
-    this.locators = new RootLocators(page);
+    // this.locators = new RootLocators(page);
     this.cartPanelLocators = new CartPanelLocators(page);
   }
+
+  // Locators
+  locators = {
+    userDropdown:             () => this.page.locator('#dropdownUser'),
+    logoutButton:             () => this.page.locator('#navbarNav > ul > li.nav-item.dropdown.show > div > form > button'),
+    cartItemCountDisplay:     () => this.page.locator('#basketContainer > span.basket-count-items'),
+    cartDropdown:             () => this.page.locator('#dropdownBasket'),
+    productsContainer:        () => this.page.locator('body > div > div.container > div > div.note-list.row > div'),
+    productList:              () => this.locators.productsContainer().locator('div.note-item'),
+    normalPriceProductList:   () => this.locators.productsContainer().locator('div.note-item:not(.hasDiscount)'),
+    discountPriceProductList: () => this.locators.productsContainer().locator('div.note-item.hasDiscount')
+    cartPanel: {
+
+    },
+  };
 
   // Actions
 
