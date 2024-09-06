@@ -1,74 +1,6 @@
 import { expect, Page, Locator } from "@playwright/test";
 import { API } from "../API";
 
-// class RootLocators {
-//   page: Page;
-
-//   constructor(page: Page) {
-//     this.page = page;
-//   }
-
-//   userDropdown() {
-//     return this.page.locator('#dropdownUser');
-//   }
-
-//   logoutButton() {
-//     return this.page.locator('#navbarNav > ul > li.nav-item.dropdown.show > div > form > button');
-//   }
-
-//   cartItemCountDisplay() {
-//     return this.page.locator('#basketContainer > span.basket-count-items');
-//   }
-
-//   cartDropdown() {
-//     return this.page.locator('#dropdownBasket');
-//   }
-
-//   productsContainer() {
-//     return this.page.locator('body > div > div.container > div > div.note-list.row > div');
-//   }
-
-//   productList() {
-//     return this.productsContainer().locator('div.note-item');
-//   }
-
-//   normalPriceProductList() {
-//     return this.productsContainer().locator('div.note-item:not(.hasDiscount)');
-//   }
-
-//   discountPriceProductList() {
-//     return this.productsContainer().locator('div.note-item.hasDiscount');
-//   }
-// }
-
-class CartPanelLocators {
-  page: Page;
-
-  constructor(page: Page) {
-    this.page = page;
-  }
-
-  resetCartButton() {
-    return this.page.getByRole("button", { name: /очистить корзину/i });
-  }
-
-  goToCartButton() {
-    return this.page.getByRole("button", { name: /перейти в корзину/i });
-  }
-
-  cartPanel() {
-    return this.page.locator('#basketContainer > div.dropdown-menu.dropdown-menu-right');
-  }
-
-  cartPanelItemList() {
-    return this.cartPanel().locator('li.basket-item');
-  }
-
-  cartPanelTotalPrice() {
-    return this.cartPanel().locator('span.basket_price');
-  }
-}
-
 class Cart {
   readonly products: Map<string, { name: string, totalPrice: number, count: number }>;
 
@@ -123,27 +55,21 @@ class Product {
   }
 
   static async makeProduct(cart: Cart, item: Locator) {
-    const name = await Product.extractors.name(item);
-    const price = await Product.extractors.price(item);
-    const hasDiscount = await Product.extractors.hasDiscount(item);
-    const productCount = await Product.extractors.count(item);
-    const id = await Product.extractors.id(item);
+    const name = await Product.helpers.name(item);
+    const price = await Product.helpers.price(item);
+    const hasDiscount = await Product.helpers.hasDiscount(item);
+    const productCount = await Product.helpers.count(item);
+    const id = await Product.helpers.id(item);
 
     const product = new Product(cart, id, name, price, productCount, hasDiscount, item);
     return product;
   }
 
-  static extractors = {
+  static helpers = {
     locators: {
-      name(item: Locator) {
-        return item.locator("div.product_name");
-      },
-      price(item: Locator) {
-        return item.locator("span.product_price");
-      },
-      count(item: Locator) {
-        return item.locator(".product_count");
-      }
+      name:  (item: Locator) => item.locator("div.product_name"),
+      price: (item: Locator)  => item.locator("span.product_price"),
+      count: (item: Locator)  => item.locator(".product_count"),
     },
 
     parseProductCount(text: string): number {
@@ -197,8 +123,6 @@ class Product {
 class RootPage {
   readonly page: Page;
   readonly cart: Cart;
-  // readonly locators: RootLocators;
-  readonly cartPanelLocators: CartPanelLocators;
   readonly api: API;
   readonly products: Map<string, Product>;
 
@@ -207,11 +131,8 @@ class RootPage {
     this.api = api;
     this.cart = new Cart();
     this.products = new Map();
-    // this.locators = new RootLocators(page);
-    this.cartPanelLocators = new CartPanelLocators(page);
   }
 
-  // Locators
   locators = {
     userDropdown:             () => this.page.locator('#dropdownUser'),
     logoutButton:             () => this.page.locator('#navbarNav > ul > li.nav-item.dropdown.show > div > form > button'),
@@ -220,9 +141,16 @@ class RootPage {
     productsContainer:        () => this.page.locator('body > div > div.container > div > div.note-list.row > div'),
     productList:              () => this.locators.productsContainer().locator('div.note-item'),
     normalPriceProductList:   () => this.locators.productsContainer().locator('div.note-item:not(.hasDiscount)'),
-    discountPriceProductList: () => this.locators.productsContainer().locator('div.note-item.hasDiscount')
+    discountPriceProductList: () => this.locators.productsContainer().locator('div.note-item.hasDiscount'),
     cartPanel: {
-
+      panel:           () => this.page.locator('#basketContainer > div.dropdown-menu.dropdown-menu-right'),
+      itemList:        () => this.locators.cartPanel.panel().locator('li.basket-item'),
+      itemName:        (item: Locator) => item.locator('span.basket-item-title'),
+      itemPrice:       (item: Locator) => item.locator('span.basket-item-price'),
+      itemCount:       (item: Locator) => item.locator('span.basket-item-count'),
+      totalPrice:      () => this.locators.cartPanel.panel().locator('span.basket_price'),
+      resetCartButton: () => this.page.getByRole("button", { name: /очистить корзину/i }),
+      goToCartButton:  () => this.page.getByRole("button", { name: /перейти в корзину/i }),
     },
   };
 
@@ -288,13 +216,13 @@ class RootPage {
   }
 
   async clickResetCartButton(): Promise<void> {
-    await expect(this.cartPanelLocators.resetCartButton()).toBeVisible();
-    await this.cartPanelLocators.resetCartButton().click();
+    await expect(this.locators.cartPanel.resetCartButton()).toBeVisible();
+    await this.locators.cartPanel.resetCartButton().click();
   }
 
   async clickGoToCart(): Promise<void> {
-    await expect(this.cartPanelLocators.goToCartButton()).toBeVisible();
-    await this.cartPanelLocators.goToCartButton().click();
+    await expect(this.locators.cartPanel.goToCartButton()).toBeVisible();
+    await this.locators.cartPanel.goToCartButton().click();
   }
 
   // Assertions
@@ -312,24 +240,21 @@ class RootPage {
   }
 
   async checkCartPanel() {
-    await expect(this.cartPanelLocators.cartPanel()).toBeVisible();
-    const cartItems = await this.cartPanelLocators.cartPanelItemList().all();
+    await expect(this.locators.cartPanel.panel()).toBeVisible();
 
+    const cartItems = await this.locators.cartPanel.itemList().all();
     expect(this.cart.products.size).toEqual(cartItems.length);
 
     const expectedCartItems = [...this.cart.products.values()];
     for (let i=0; i < cartItems.length; i++) {
       const it = cartItems[i];
       const expectedItem = expectedCartItems[i];
-      await expect(it.locator('span.basket-item-title')).toHaveText(expectedItem.name);
-      await expect(it.locator('span.basket-item-price')).toHaveText(`- ${expectedItem.totalPrice} р.`);
-      await expect(it.locator('span.basket-item-count')).toHaveText(expectedItem.count.toString());
+      await expect(this.locators.cartPanel.itemName(it)).toHaveText(expectedItem.name);
+      await expect(this.locators.cartPanel.itemPrice(it)).toHaveText(`- ${expectedItem.totalPrice} р.`);
+      await expect(this.locators.cartPanel.itemCount(it)).toHaveText(expectedItem.count.toString());
     }
-
-    await expect(this.cartPanelLocators.cartPanel().locator('span.basket_price')).toHaveText(this.cart.totalPrice.toString());
+    await expect(this.locators.cartPanel.totalPrice()).toHaveText(this.cart.totalPrice.toString());
   }
 }
-
-
 
 export { RootPage };
